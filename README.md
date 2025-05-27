@@ -15,7 +15,7 @@
 
 ```bash
 # Clone this repository
-git clone [https://github.com/your-repo/arbitrage-larry.git](https://github.com/btb-finance/ArbitrageBot)
+git clone https://github.com/btb-finance/ArbitrageBot.git
 cd ArbitrageBot
 
 # Install dependencies
