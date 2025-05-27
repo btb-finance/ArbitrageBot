@@ -1,47 +1,49 @@
-⏺ KyberSwap Arbitrage System - Complete Integration Guide
+# KyberSwap Arbitrage System - Complete Technical Guide
 
-  Overview
+## 🎯 Overview
 
-  This guide provides complete documentation for integrating with the KyberSwap Aggregator API to execute
-  arbitrage between KyberSwap and Larry DEX on Base network.
+This guide provides complete technical documentation for the KyberSwap ↔ Larry DEX arbitrage system running on Base network. The system automatically finds and executes profitable arbitrage opportunities between these two exchanges.
 
-  Contract Information
+## 📋 Contract Information
 
-  - Contract Address: 0xC14957db5A544167633cF8B480eB6FbB25b6da19
-  - Network: Base (Chain ID: 8453)
-  - Larry DEX: 0x888d81e3ea5E8362B5f69188CBCF34Fa8da4b888
-  - KyberSwap Router: 0x6131B5fae19EA4f9D964eAc0408E4408b66337b5
+- **Arbitrage Contract**: `0xC14957db5A544167633cF8B480eB6FbB25b6da19`
+- **Network**: Base Mainnet (Chain ID: 8453)
+- **Larry DEX**: `0x888d81e3ea5E8362B5f69188CBCF34Fa8da4b888`
+- **KyberSwap Router**: `0x6131B5fae19EA4f9D964eAc0408E4408b66337b5`
 
-  API Endpoints
+## 🌐 API Endpoints
 
-  Base URL
+### Base URL
+```
+https://aggregator-api.kyberswap.com/base/api/v1/
+```
 
-  https://aggregator-api.kyberswap.com/base/api/v1/
+### Key Endpoints
+1. `GET /routes` - Get optimal swap route
+2. `POST /route/build` - Build executable swap data
 
-  Key Endpoints
+## 🏷️ Token Addresses (CRITICAL)
 
-  1. GET /routes - Get optimal swap route
-  2. POST /route/build - Build executable swap data
+### ✅ Correct Addresses
+```javascript
+const ETH_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";  // ETH (NOT WETH!)
+const LARRY_ADDRESS = "0x888d81e3ea5E8362B5f69188CBCF34Fa8da4b888"; // LARRY token
+const CONTRACT_ADDRESS = "0xC14957db5A544167633cF8B480eB6FbB25b6da19"; // Our arbitrage contract
+```
 
-  Token Addresses (CRITICAL)
+### ❌ Common Mistakes
+```javascript
+// DON'T USE THESE:
+const WETH_ADDRESS = "0x4200000000000000000000000000000000000006"; // This is WETH, not ETH!
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"; // Wrong for ETH
+```
 
-  ✅ Correct Addresses
+## 🔧 Step-by-Step Integration
 
-  const ETH_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";  // ETH (NOT WETH!)
-  const LARRY_ADDRESS = "0x888d81e3ea5E8362B5f69188CBCF34Fa8da4b888"; // LARRY token
-  const CONTRACT_ADDRESS = "0xC14957db5A544167633cF8B480eB6FbB25b6da19"; // Our arbitrage contract
+### Step 1: Get Route Information
 
-  ❌ Common Mistakes
-
-  // DON'T USE THESE:
-  const WETH_ADDRESS = "0x4200000000000000000000000000000000000006"; // This is WETH, not ETH!
-  const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"; // Wrong for ETH
-
-  Step-by-Step Integration
-
-  Step 1: Get Route Information
-
-  async function getKyberSwapRoute(tokenIn, tokenOut, amountIn) {
+```javascript
+async function getKyberSwapRoute(tokenIn, tokenOut, amountIn) {
       const url = 'https://aggregator-api.kyberswap.com/base/api/v1/routes';
 
       const params = {
