@@ -10,5 +10,52 @@ out/
 # Docs
 docs/
 
-# Dotenv file
+# Environment variables and sensitive files
 .env
+.env.*
+!.env.example
+*.key
+*.pem
+config.json
+secrets.json
+private_keys.txt
+mnemonic.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Node modules (if any)
+node_modules/
+
+# Foundry specific
+broadcast/*/run-*.json
+!broadcast/*/run-latest.json
