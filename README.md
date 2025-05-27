@@ -15,8 +15,8 @@
 
 ```bash
 # Clone this repository
-git clone https://github.com/your-repo/arbitrage-larry.git
-cd arbitrage-larry
+git clone [https://github.com/your-repo/arbitrage-larry.git](https://github.com/btb-finance/ArbitrageBot)
+cd ArbitrageBot
 
 # Install dependencies
 pip3 install web3 aiohttp python-dotenv
