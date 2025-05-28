@@ -53,6 +53,13 @@ LARRY_DEX_ABI = [
         "outputs": [{"name": "", "type": "uint256"}],
         "stateMutability": "view",
         "type": "function"
+    },
+    {
+        "inputs": [{"name": "amount", "type": "uint256"}],
+        "name": "getBuyLARRY",
+        "outputs": [{"name": "", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function"
     }
 ]
 
@@ -134,6 +141,16 @@ class ArbitrageBot:
         except Exception as e:
             logger.error(f"Error getting Larry price: {e}")
             return 0
+    
+    def get_larry_from_eth(self, eth_amount):
+        """Calculate LARRY amount from ETH via Larry DEX"""
+        try:
+            # Call Larry DEX to get ETH -> LARRY conversion
+            larry_out = self.larry_contract.functions.getBuyLARRY(eth_amount).call()
+            return larry_out
+        except Exception as e:
+            logger.error(f"Error getting LARRY from ETH: {e}")
+            return 0
 
     def calculate_profit_percentage(self, input_amount, output_amount):
         """Calculate profit percentage"""
@@ -141,42 +158,67 @@ class ArbitrageBot:
             return 0
         return ((output_amount - input_amount) / input_amount) * 100
 
-    async def check_arbitrage_opportunity(self, session, direction):
-        """Check if arbitrage opportunity exists in given direction"""
+    async def check_both_arbitrage_directions(self, session):
+        """Check arbitrage opportunities in both directions"""
         try:
-            if direction:  # ETH -> LARRY -> ETH (KyberSwap -> Larry)
-                # Get KyberSwap route: ETH -> LARRY
-                route = await self.get_kyberswap_route(
-                    session, ETH_ADDRESS, LARRY_ADDRESS, TRADE_AMOUNT_WEI
-                )
-                
-                if not route or not route.get('routeSummary'):
-                    return None, 0
-                
-                larry_amount = int(route['routeSummary']['amountOut'])
-                
-                # Account for minimal slippage in profit calculation
+            best_route = None
+            best_profit = 0
+            best_direction = True
+            
+            # Direction 1: ETH -> LARRY (KyberSwap) -> ETH (Larry)
+            route_1 = await self.get_kyberswap_route(
+                session, ETH_ADDRESS, LARRY_ADDRESS, TRADE_AMOUNT_WEI
+            )
+            
+            if route_1 and route_1.get('routeSummary'):
+                larry_amount = int(route_1['routeSummary']['amountOut'])
                 larry_amount_after_slippage = larry_amount * 999 // 1000  # 0.1% slippage
-                
-                # Simulate Larry -> ETH conversion
                 eth_out = self.get_larry_price_out(larry_amount_after_slippage)
+                profit_pct_1 = self.calculate_profit_percentage(TRADE_AMOUNT_WEI, eth_out)
                 
-                profit_pct = self.calculate_profit_percentage(TRADE_AMOUNT_WEI, eth_out)
+                logger.info(f"Direction 1 - ETH->LARRY(Kyber)->ETH(Larry): {TRADE_AMOUNT_ETH} ETH -> {larry_amount/1e18:.6f} LARRY -> {eth_out/1e18:.6f} ETH (Profit: {profit_pct_1:.2f}%)")
                 
-                logger.info(f"ETH->LARRY->ETH: {TRADE_AMOUNT_ETH} ETH -> {larry_amount/1e18:.6f} LARRY -> {eth_out/1e18:.6f} ETH (Profit: {profit_pct:.2f}%)")
+                if profit_pct_1 >= MIN_PROFIT_PERCENTAGE and profit_pct_1 > best_profit:
+                    best_route = route_1['routeSummary']
+                    best_profit = profit_pct_1
+                    best_direction = True
+            
+            # Direction 2: ETH -> LARRY (Larry) -> ETH (KyberSwap)
+            try:
+                # Get how much LARRY we'd get from Larry DEX
+                larry_from_larry_dex = self.get_larry_from_eth(TRADE_AMOUNT_WEI)
                 
-                if profit_pct >= MIN_PROFIT_PERCENTAGE:
-                    return route['routeSummary'], profit_pct
+                if larry_from_larry_dex > 0:
+                    # Check what we'd get selling this LARRY on KyberSwap
+                    route_2 = await self.get_kyberswap_route(
+                        session, LARRY_ADDRESS, ETH_ADDRESS, larry_from_larry_dex
+                    )
                     
-            else:  # LARRY -> ETH -> LARRY (Larry -> KyberSwap)
-                # This direction is more complex as we need to estimate LARRY input
-                # For simplicity, we'll focus on the ETH->LARRY->ETH direction
-                pass
+                    if route_2 and route_2.get('routeSummary'):
+                        eth_out_kyber = int(route_2['routeSummary']['amountOut'])
+                        eth_out_after_slippage = eth_out_kyber * 999 // 1000  # 0.1% slippage
+                        profit_pct_2 = self.calculate_profit_percentage(TRADE_AMOUNT_WEI, eth_out_after_slippage)
+                        
+                        logger.info(f"Direction 2 - ETH->LARRY(Larry)->ETH(Kyber): {TRADE_AMOUNT_ETH} ETH -> {larry_from_larry_dex/1e18:.6f} LARRY -> {eth_out_after_slippage/1e18:.6f} ETH (Profit: {profit_pct_2:.2f}%)")
+                        
+                        if profit_pct_2 >= MIN_PROFIT_PERCENTAGE and profit_pct_2 > best_profit:
+                            best_route = route_2['routeSummary']
+                            best_profit = profit_pct_2
+                            best_direction = False
+            except Exception as e:
+                logger.debug(f"Direction 2 check failed: {e}")
+            
+            if best_route and best_profit >= MIN_PROFIT_PERCENTAGE:
+                direction_name = "ETH->LARRY(Kyber)->ETH(Larry)" if best_direction else "ETH->LARRY(Larry)->ETH(Kyber)"
+                logger.info(f"🎯 Best opportunity: {direction_name} with {best_profit:.2f}% profit")
+                return best_route, best_profit, best_direction
+            else:
+                logger.info("⏳ No profitable opportunities found in either direction")
+                return None, 0, True
                 
         except Exception as e:
-            logger.error(f"Error checking arbitrage opportunity: {e}")
-            
-        return None, 0
+            logger.error(f"Error checking arbitrage opportunities: {e}")
+            return None, 0, True
 
     async def execute_arbitrage(self, route_summary, direction):
         """Execute arbitrage trade"""
@@ -254,20 +296,21 @@ class ArbitrageBot:
         while True:
             try:
                 async with aiohttp.ClientSession() as session:
-                    # Check ETH -> LARRY -> ETH direction
-                    route_summary, profit_pct = await self.check_arbitrage_opportunity(session, True)
+                    # Check both directions for arbitrage opportunities
+                    route_summary, profit_pct, direction = await self.check_both_arbitrage_directions(session)
                     
                     if route_summary and profit_pct >= MIN_PROFIT_PERCENTAGE:
-                        logger.info(f"🎯 Profitable opportunity found! Profit: {profit_pct:.2f}%")
+                        direction_name = "ETH->LARRY(Kyber)->ETH(Larry)" if direction else "ETH->LARRY(Larry)->ETH(Kyber)"
+                        logger.info(f"🎯 Executing {direction_name} arbitrage with {profit_pct:.2f}% profit")
                         
-                        success = await self.execute_arbitrage(route_summary, True)
+                        success = await self.execute_arbitrage(route_summary, direction)
                         
                         if success:
                             logger.info("💰 Arbitrage completed successfully!")
                         else:
                             logger.error("❌ Arbitrage execution failed")
                     else:
-                        logger.info("⏳ No profitable opportunities found")
+                        logger.info("⏳ No profitable opportunities found in either direction")
                 
                 # Wait 30 seconds before next check
                 await asyncio.sleep(30)
