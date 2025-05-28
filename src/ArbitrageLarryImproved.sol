@@ -74,7 +74,7 @@ contract ArbitrageLarryImprovedV2 {
     IWETH public immutable weth;
     
     address public owner;
-    uint256 public minProfitWei = 10000000000000; // 0.00001 ETH
+    uint256 public minProfitWei = 5000000000000; // 0.000005 ETH (to support 0.5% profit margins)
     uint256 public maxSlippage = 300; // 3% in basis points
     uint256 public protocolFee = 500; // 5% protocol fee in basis points
     
