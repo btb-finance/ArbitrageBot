@@ -22,7 +22,7 @@ load_dotenv()
 RPC_URL = os.getenv("BASE_RPC_URL", "https://mainnet.base.org")
 CONTRACT_ADDRESS = "0xC14957db5A544167633cF8B480eB6FbB25b6da19"
 PRIVATE_KEY = os.getenv("PRIVATE_KEY")
-TRADE_AMOUNT_ETH = "0.001"
+TRADE_AMOUNT_ETH = "0.002"
 TRADE_AMOUNT_WEI = Web3.to_wei(TRADE_AMOUNT_ETH, 'ether')
 MIN_PROFIT_PERCENTAGE = 1.0  # Minimum 1% profit to execute trade
 
