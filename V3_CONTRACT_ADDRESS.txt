@@ -1,0 +1,4 @@
+V3 Contract Address: 0x7Bee2beF4adC5504CD747106924304d26CcFBd94
+Deployed at: 2025-05-28 17:54:01
+Transaction: 60e1a05c2b9f6cef5841c3ae5e79e324d39db2a46dc87bf11e4ec63810d9cc99
+Block: 30829147
