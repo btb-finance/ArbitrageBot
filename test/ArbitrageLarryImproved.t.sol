@@ -187,10 +187,10 @@ contract ArbitrageLarryImprovedTest is Test {
         console.log("Min Profit Required:", arbitrage.minProfitWei());
         
         if (isProfitable) {
-            console.log("✅ PROFITABLE - Arbitrage opportunity exists!");
+            console.log("PROFITABLE - Arbitrage opportunity exists!");
             assertGe(expectedProfit, arbitrage.minProfitWei(), "Profit should meet minimum");
         } else {
-            console.log("❌ Not profitable at current market conditions");
+            console.log("Not profitable at current market conditions");
         }
     }
     
